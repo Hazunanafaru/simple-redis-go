@@ -2,29 +2,31 @@ package main
 
 import (
 	"context"
-	"log"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
 	"github.com/gomodule/redigo/redis"
+	log "github.com/sirupsen/logrus"
 )
 
 func main() {
-	//Pool
+	// Pool
+	// Make sure to have a redis server or container
+	// You can pull a redis container with this code
+	// docker pull redis:6.2-alpine
+	// and run it with
+	// docker run -d -p 6379:6379 redis:6.2-alpine
 	var pool *redis.Pool
-	redisPassword := os.Getenv("REDIS_PASS")
-	redisHost := os.Getenv("REDIS_HOST")
-	if redisHost == "" {
-		redisHost = ":6379"
-	}
+	redisHost := ":6379"
 
 	pool = &redis.Pool{
 		MaxIdle:     3,
 		IdleTimeout: 120 * time.Second,
 		Dial: func() (redis.Conn, error) {
-			conn, err := redis.Dial("tcp", redisHost, redis.DialPassword(redisPassword))
+			conn, err := redis.Dial("tcp", redisHost)
 			if err != nil {
 				return nil, err
 			}
@@ -53,4 +55,30 @@ func main() {
 	if err := start(context.Background(), pool); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func start(ctx context.Context, pool *redis.Pool) error {
+	var err error
+
+	for i := 0; i < 10; i++ {
+		// Retrieve connection to Reddis Pool
+		conn := pool.Get()
+
+		// Example of SET command
+		_, err := redis.Bytes(conn.Do("SET", fmt.Sprintf("key-is-%v", i), fmt.Sprintf("value-is-%v", i)))
+		if err != nil {
+			log.Error(err)
+		}
+
+		// Example of GET command
+		data, err := redis.Bytes(conn.Do("GET", fmt.Sprintf("key-is-%v", i)))
+		if err != nil {
+			log.Error(err)
+		} else {
+			log.Info("Got value: %v", string(data))
+		}
+		conn.Close()
+	}
+
+	return err
 }
