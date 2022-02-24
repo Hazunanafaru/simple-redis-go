@@ -14,11 +14,6 @@ import (
 
 func main() {
 	// Pool
-	// Make sure to have a redis server or container
-	// You can pull a redis container with this code
-	// docker pull redis:6.2-alpine
-	// and run it with
-	// docker run -d -p 6379:6379 redis:6.2-alpine
 	var pool *redis.Pool
 	redisHost := ":6379"
 
